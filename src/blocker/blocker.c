@@ -75,6 +75,7 @@ static void purge_limbo_stale(void);
 
 int main(int argc, char *argv[]) {
     sigset_t set;
+    attack_t parsed_attack;
 
     init_log();
     srand(time(NULL));
@@ -136,18 +137,8 @@ int main(int argc, char *argv[]) {
 
     sshguard_log(LOG_INFO, "Now monitoring attacks.");
 
-    char buf[1024];
-    attack_t parsed_attack;
-    while (!exit_sig && fgets(buf, sizeof(buf), stdin) != NULL) {
-        if (sscanf(buf, "%d %46s %d %d\n", (int*)&parsed_attack.service,
-                  parsed_attack.address.value, &parsed_attack.address.kind,
-                  &parsed_attack.dangerousness) == 4) {
-            report_address(parsed_attack);
-        } else {
-            sshguard_log(LOG_ERR, "Could not parse attack data.");
-            break;
-        }
-    }
+    while (!exit_sig && fread(&parsed_attack, sizeof parsed_attack, 1, stdin) != 1)
+        report_address(parsed_attack);
 
     if (exit_sig) {
         sshguard_log(LOG_INFO, "Exiting on %s.",
@@ -156,7 +147,10 @@ int main(int argc, char *argv[]) {
                 exit_sig == SIGTERM ? "SIGTERM" : "signal");
     } else if (feof(stdin)) {
         sshguard_log(LOG_DEBUG, "Received EOF from stdin.");
+    } else if (ferror(stdin)) {
+        sshguard_log(LOG_ERR, "Could not receive attack data.");
     }
+
     finishup();
 }
 

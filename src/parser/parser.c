@@ -18,8 +18,11 @@
 unsigned int test_counter = 0;
 
 static void print_attack(const attack_t *attack) {
-    printf("%d %s %d %d\n", attack->service, attack->address.value,
-           attack->address.kind, attack->dangerousness);
+    size_t ret = fwrite(attack, sizeof(*attack), 1, stdout);
+    if (ret != 1) {
+        fprintf(stderr, "fwrite() failed.\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 static void parse_to_buf(char buf[static 1], char dst[static MAX_LEN]) {
